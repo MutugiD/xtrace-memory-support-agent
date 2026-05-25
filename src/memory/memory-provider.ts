@@ -4,7 +4,7 @@ import { MockMemoryService } from "./mock-memory-service.js";
 
 export type MemoryServiceLike = Pick<
   MemoryService,
-  "ingestTurn" | "retrieveContext" | "listFacts" | "buildTimeline" | "resetUser" | "getMemoryById"
+  "ingestTurn" | "retrieveContext" | "listFacts" | "buildTimeline" | "buildRichTimeline" | "listAllMemories" | "listMemoriesByType" | "getMemoryById" | "resetUser"
 >;
 
 export function createMemoryService(env: Env): MemoryServiceLike {
