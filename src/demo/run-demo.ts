@@ -1,3 +1,7 @@
+// Force IPv4 DNS — XTrace API times out on IPv6 in some environments (WSL)
+import * as dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+
 import { loadEnv } from "../config.js";
 import { createMemoryService } from "../memory/memory-provider.js";
 import { runSupportDemo } from "./scenarios.js";

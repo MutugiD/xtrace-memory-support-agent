@@ -184,6 +184,15 @@ export class MockMemoryService {
     return all.filter((m) => m.type === "fact" && (m.details?.status ?? "active") === "active");
   }
 
+  /** Look up a single memory by ID from the in-memory store. */
+  async getMemoryById(memoryId: string): Promise<any> {
+    for (const facts of store.factsByUser.values()) {
+      const found = facts.find((m) => m.id === memoryId);
+      if (found) return found;
+    }
+    throw new Error(`Memory not found: ${memoryId}`);
+  }
+
   async buildTimeline(params: { userId: string }): Promise<TimelineEvent[]> {
     const all = await this.listFacts({ userId: params.userId, includeSuperseded: true });
     return computeTimelineFromFacts(all);

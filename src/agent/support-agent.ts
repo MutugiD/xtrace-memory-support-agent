@@ -20,6 +20,13 @@ export type ChatTurnResult = {
     supersededCount: number;
     supersededBy: Record<string, string>;
     stageTimings?: Record<string, number>;
+  } | {
+    jobId: string;
+    error: { statusCode: number; code: string; message: string };
+    createdCount: number;
+    updatedCount: number;
+    supersededCount: number;
+    supersededBy: Record<string, string>;
   };
 };
 
@@ -46,7 +53,7 @@ export class SupportAgent {
     const retrievalQuery = `${params.customerMessage}\n\nCustomer support context: plan, contact preference, current issue, accounting system, technical stack.`;
     const retrieved = shouldRetrieve
       ? await this.memory.retrieveContext({ userId: params.userId, convId: params.convId, query: retrievalQuery })
-      : { contextPrompt: null, memories: [] as Memory[] };
+      : { contextPrompt: null as string | null, memories: [] as Memory[] };
 
     const llmMessages = buildSupportPrompt({
       mode: params.mode,
@@ -63,34 +70,62 @@ export class SupportAgent {
       llmMessages
     });
 
+    // Stateless mode: never write to memory. The core demo comparison depends on this.
+    if (params.mode === "stateless") {
+      return {
+        reply,
+        usedLlm,
+        retrieved: { contextPrompt: retrieved.contextPrompt, memories: retrieved.memories },
+        writeResult: { jobId: "", createdCount: 0, updatedCount: 0, supersededCount: 0, supersededBy: {} }
+      };
+    }
+
+    // With-memory mode: ingest the turn, but handle rate-limit / API errors gracefully.
     const now = new Date().toISOString();
-    const writeResult = await this.memory.ingestTurn({
-      userId: params.userId,
-      convId: params.convId,
-      metadata: { demo: true, mode: params.mode },
-      messages: [
-        { role: "user", content: params.customerMessage, date: now },
-        { role: "assistant", content: reply, date: now }
-      ]
-    });
+    try {
+      const result = await this.memory.ingestTurn({
+        userId: params.userId,
+        convId: params.convId,
+        metadata: { demo: true, mode: params.mode },
+        messages: [
+          { role: "user", content: params.customerMessage, date: now },
+          { role: "assistant", content: reply, date: now }
+        ]
+      });
 
-    const supersededCount = Object.keys(writeResult.supersededBy ?? {}).length;
-
-    return {
-      reply,
-      usedLlm,
-      retrieved: {
-        contextPrompt: retrieved.contextPrompt,
-        memories: retrieved.memories
-      },
-      writeResult: {
-        jobId: writeResult.jobId,
-        createdCount: writeResult.created.length,
-        updatedCount: writeResult.updated.length,
-        supersededCount,
-        supersededBy: writeResult.supersededBy,
-        stageTimings: writeResult.stageTimings
-      }
-    };
+      const supersededCount = Object.keys(result.supersededBy ?? {}).length;
+      return {
+        reply,
+        usedLlm,
+        retrieved: { contextPrompt: retrieved.contextPrompt, memories: retrieved.memories },
+        writeResult: {
+          jobId: result.jobId,
+          createdCount: result.created.length,
+          updatedCount: result.updated.length,
+          supersededCount,
+          supersededBy: result.supersededBy,
+          stageTimings: result.stageTimings
+        }
+      };
+    } catch (err: any) {
+      // XTrace API error (rate limit, network, etc) — still return the reply,
+      // but surface the error so callers can log/display it.
+      const statusCode = err?.status ?? err?.statusCode ?? 0;
+      const code = err?.code ?? "unknown_error";
+      const message = err?.message ?? String(err);
+      return {
+        reply,
+        usedLlm,
+        retrieved: { contextPrompt: retrieved.contextPrompt, memories: retrieved.memories },
+        writeResult: {
+          jobId: "write_failed",
+          createdCount: 0,
+          updatedCount: 0,
+          supersededCount: 0,
+          supersededBy: {},
+          error: { statusCode, code, message }
+        }
+      };
+    }
   }
 }
