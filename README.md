@@ -8,9 +8,11 @@ A Fastify + TypeScript demo that uses the **XTrace Memory API** to give a suppor
 - **Belief revision / contradictions:** when a customer corrects themselves (plan Pro → Enterprise, contact email → Slack), old facts are **superseded** — not duplicated. The `memories_superseded_by` and `details.supersedes` fields surface this explicitly.
 - **Retrieval for continuity:** before responding, the agent retrieves XTrace's assembled `context_prompt` via `memories.retrieve`. New sessions start with relevant context (no cold start).
 - **Provenance / timeline:** active + superseded + retracted facts with lineage (`supersedes` → computed `replacedBy`). Every fact is traceable to the session (`conv_id`) that produced it.
+- **Episodes & artifacts:** XTrace can extract not just facts but **episodes** (conversation summaries that reference their constituent facts) and **artifacts** (structured knowledge documents that reference source facts). Enabled via `extract_artifacts: true`.
 - **Stateless vs memory-aware comparison:** the scripted demo runs both modes back-to-back so the pain point is obvious in 30 seconds.
 - **Single-fact lookup:** `GET /api/memory/:userId/facts/:factId` returns full provenance details for any fact.
-- **SDK feature tests:** live test suite exercising belief write, retrieval, revision, provenance, fact lookup, user isolation, and stateless safety against the real XTrace API.
+- **Rich timeline:** `GET /api/memory/:userId/rich-timeline` returns facts, episodes, and artifacts together with cross-references.
+- **SDK feature tests:** 13-test live suite exercising belief write, retrieval, revision, provenance, fact lookup, user isolation, episodes, artifacts, and stateless safety against the real XTrace API.
 
 ## Why I built this
 
@@ -68,7 +70,7 @@ npm run memory:timeline -- customer_123
 npm run test:sdk:reset
 ```
 
-This runs a throttled test suite against the real XTrace API, verifying belief write, retrieval, revision/supersession, provenance chains, fact lookup, user isolation, and stateless safety. Requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` in `.env`.
+This runs a throttled test suite against the real XTrace API, verifying all 13 capabilities below. Requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` in `.env`.
 
 ## API
 
@@ -79,6 +81,10 @@ This runs a throttled test suite against the real XTrace API, verifying belief w
   - returns active facts only
 - `GET /api/memory/:userId/timeline`
   - returns all facts with `supersedes` + computed `replacedBy`
+- `GET /api/memory/:userId/rich-timeline`
+  - returns facts, episodes, and artifacts with cross-references
+- `GET /api/memory/:userId/:type`
+  - list memories by type (`fact`, `episode`, `artifact`)
 - `GET /api/memory/:userId/facts/:factId`
   - returns a single fact with full provenance details
 - `POST /api/demo/run`
@@ -115,6 +121,10 @@ Tests each XTrace capability in sequence:
 | 9 | Final Timeline | All 3 sessions produce correct provenance depth |
 | 10 | Stateless Safety | `stateless` mode returns zero write side effects |
 | 11 | Memory-Aware Agent | Agent retrieves context and uses it in the reply |
+| 12 | Episodes & Artifacts | `ingest(extract_artifacts: true)` produces episode/artifact memories; episodes reference `fact_ids`, artifacts reference `source_fact_ids` |
+| 13 | Rich Timeline | `buildRichTimeline()` returns facts, episodes, and artifacts together with verified cross-references |
+
+See `docs/sdk-features-tests.md` for detailed per-test results.
 
 ## CI/CD
 
@@ -135,7 +145,9 @@ docker run -p 3000:3000 \
 
 ## Key design decisions
 
-**Memory as belief revision, not vector retrieval.** This demo intentionally does not store entire chat transcripts as "memory". Instead, it relies on XTrace's extraction pipeline to produce structured memories (facts with `supersedes` links) and XTrace's belief revision to keep the store clean as users correct themselves. This is the core differentiator.
+**Memory as belief revision, not vector retrieval.** This demo intentionally does not store entire chat transcripts as "memory". Instead, it relies on XTrace's extraction pipeline to produce structured memories (facts with `supersedes` links, episodes with `fact_ids`, artifacts with `source_fact_ids`) and XTrace's belief revision to keep the store clean as users correct themselves. This is the core differentiator.
+
+**Episodes and artifacts show XTrace's depth.** Facts are the simplest memory type, but episodes (conversation summaries linking back to individual facts) and artifacts (structured documents derived from facts) demonstrate that XTrace is not a flat key-value store — it maintains a rich knowledge graph.
 
 **Stateless mode has no side effects.** The agent only writes to memory in `with_memory` mode. `stateless` mode skips both retrieve and ingest, making the before/after comparison honest.
 
@@ -147,3 +159,4 @@ See:
 - `docs/pain-point.md`
 - `docs/architecture.md`
 - `docs/demo-script.md`
+- `docs/sdk-features-tests.md`
