@@ -1,0 +1,23 @@
+name: SDK Feature Tests
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  sdk-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: Run XTrace SDK feature tests (live API)
+        env:
+          XTRACE_API_KEY: ${{ secrets.XTRACE_API_KEY }}
+          XTRACE_ORG_ID: ${{ secrets.XTRACE_ORG_ID }}
+          XTRACE_APP_ID: xtrace-memory-support-agent-ci
+        run: npm run test:sdk:reset

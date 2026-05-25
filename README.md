@@ -1,38 +1,29 @@
 # XTrace Memory Support Agent
 
-Support teams lose customer context across tickets. Generic “memory” implementations (chat logs + vector search) can retrieve old notes, but they don’t reliably handle **when a fact changed**, **which fact is current**, or **why it changed**.
+A Fastify + TypeScript demo that uses the **XTrace Memory API** to give a support agent durable, revisable customer context across sessions. The focus is on memory as **belief revision**, with **contradiction handling**, **provenance**, and **continuity** — not just retrieval over chat logs.
 
-This demo uses the **XTrace Memory API** to build a memory-aware support agent that demonstrates:
+## What it demonstrates
 
-- **Belief revision (supersede vs retract):** contradictions update the belief graph instead of piling up duplicates.
-- **Provenance / timeline:** every remembered fact is traceable to the conversation session (`conv_id`) that produced it.
-- **Continuity across sessions:** new sessions start with relevant context (no cold start).
+- **Memory write pipeline:** every customer/agent turn is ingested via `memories.ingest`. XTrace extracts structured facts, not raw chat logs.
+- **Belief revision / contradictions:** when a customer corrects themselves (plan Pro → Enterprise, contact email → Slack), old facts are **superseded** — not duplicated. The `memories_superseded_by` and `details.supersedes` fields surface this explicitly.
+- **Retrieval for continuity:** before responding, the agent retrieves XTrace's assembled `context_prompt` via `memories.retrieve`. New sessions start with relevant context (no cold start).
+- **Provenance / timeline:** active + superseded + retracted facts with lineage (`supersedes` → computed `replacedBy`). Every fact is traceable to the session (`conv_id`) that produced it.
+- **Stateless vs memory-aware comparison:** the scripted demo runs both modes back-to-back so the pain point is obvious in 30 seconds.
+- **Single-fact lookup:** `GET /api/memory/:userId/facts/:factId` returns full provenance details for any fact.
+- **SDK feature tests:** live test suite exercising belief write, retrieval, revision, provenance, fact lookup, user isolation, and stateless safety against the real XTrace API.
 
 ## Why I built this
 
-The hiring prompt asks applicants to build something using XTrace’s API/SDK and explain the pain point solved.
+Support teams lose customer context across tickets. Generic "memory" implementations (chat logs + vector search) can retrieve old notes, but they don't reliably handle **when a fact changed**, **which fact is current**, or **why it changed**.
 
-The pain point is extremely common in customer support:
-
-- Agents ask the same onboarding questions every ticket.
-- Agents silently use stale facts (plan, contact preference, systems) and give wrong guidance.
-- There’s no audit trail for *why* the agent believed something.
-
-## What this repo ships
-
-- Fastify API server + minimal web UI
-- XTrace-backed memory write pipeline (`ingest`) and retrieval (`retrieve` → `context_prompt`)
-- Contradiction handling surfaced via `memories_superseded_by`
-- Provenance / timeline view (active + superseded + retracted)
-- “Stateless vs memory-aware” comparison mode
-- Unit tests for the memory-specific logic (no network)
+This demo solves exactly that: a support agent that remembers customer facts across sessions, but also knows when those facts have been corrected — Pro → Enterprise, QuickBooks → NetSuite, email → Slack. Each revision is tracked, not overwritten silently.
 
 ## Quickstart
 
 ### 1) Install
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 2) Configure environment
@@ -41,23 +32,21 @@ npm install
 cp .env.example .env
 ```
 
-Set:
-
+Required for live XTrace:
 - `XTRACE_API_KEY`
 - `XTRACE_ORG_ID`
 
 Optional:
+- `OPENAI_API_KEY` (if omitted or unavailable, replies fall back to deterministic templates)
+- `XTRACE_MOCK=1` (offline mode for local testing; does not call the live XTrace API)
 
-- `OPENAI_API_KEY` (if omitted, replies are deterministic templates; memory behavior is still real)
-- `XTRACE_MOCK=1` (runs fully offline if you hit XTrace write caps; useful for local testing/CI)
-
-### 3) Run scripted demo (CLI)
+### 3) Scripted demo (CLI)
 
 ```bash
 npm run demo -- --reset
 ```
 
-The scripted demo includes a contradiction example (QuickBooks → NetSuite) so you can observe supersession.
+The scripted scenario includes a contradiction example (QuickBooks → NetSuite) so you can observe supersession.
 
 ### 4) Run the web app
 
@@ -67,9 +56,70 @@ npm run dev
 
 Open `http://localhost:3000/`.
 
+### 5) Provenance / timeline (CLI)
+
+```bash
+npm run memory:timeline -- customer_123
+```
+
+### 6) SDK feature tests (live API)
+
+```bash
+npm run test:sdk:reset
+```
+
+This runs a throttled test suite against the real XTrace API, verifying belief write, retrieval, revision/supersession, provenance chains, fact lookup, user isolation, and stateless safety. Requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` in `.env`.
+
+## API
+
+- `POST /api/chat`
+  - body: `{ "userId", "convId", "message", "mode": "with_memory" | "stateless" }`
+  - In `with_memory` mode: retrieves context, generates reply, ingests turn. In `stateless` mode: no memory read or write.
+- `GET /api/memory/:userId`
+  - returns active facts only
+- `GET /api/memory/:userId/timeline`
+  - returns all facts with `supersedes` + computed `replacedBy`
+- `GET /api/memory/:userId/facts/:factId`
+  - returns a single fact with full provenance details
+- `POST /api/demo/run`
+  - runs scripted scenario
+- `DELETE /api/demo/reset?userId=customer_123`
+  - deletes demo-scoped memories (scoped by `XTRACE_APP_ID`)
+
+## Testing
+
+```bash
+npm test
+```
+
+Unit tests use `XTRACE_MOCK=1` and do not require network access.
+
+### SDK feature tests (live)
+
+```bash
+npm run test:sdk:reset
+```
+
+Tests each XTrace capability in sequence:
+
+| # | Feature | What it verifies |
+|---|---------|------------------|
+| 1 | Belief Write | `ingest` creates facts with structured text |
+| 2 | Retrieval | `retrieve` returns `context_prompt` with active facts |
+| 3 | Belief Revision | Second `ingest` supersedes old facts (Pro→Enterprise, email→Slack) |
+| 4 | Provenance | Timeline shows `supersedes` and computed `replacedBy` chains |
+| 5 | Fact Lookup | `getMemoryById` returns full fact details with `source_role`, `conv_id` |
+| 6 | Revised Retrieval | `context_prompt` reflects current facts, not stale ones |
+| 7 | User Isolation | User B's facts don't appear in User A's context |
+| 8 | Third Revision | QuickBooks→NetSuite supersession produces correct chain |
+| 9 | Final Timeline | All 3 sessions produce correct provenance depth |
+| 10 | Stateless Safety | `stateless` mode returns zero write side effects |
+| 11 | Memory-Aware Agent | Agent retrieves context and uses it in the reply |
+
 ## CI/CD
 
-- CI: `.github/workflows/ci.yml` runs `npm ci`, `npm test`, and `npm run build` on PRs and on pushes to `main`.
+- CI: `.github/workflows/ci.yml` runs `npm ci`, `npm test`, `npm run build` on PRs and pushes to `main`.
+- SDK tests: `.github/workflows/sdk-tests.yml` runs live XTrace API tests on pushes to `main` (requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` secrets).
 - CD: `.github/workflows/docker.yml` builds and pushes a Docker image to GHCR on pushes to `main` (and on tags `v*`).
 
 ### Run via Docker
@@ -77,37 +127,23 @@ Open `http://localhost:3000/`.
 ```bash
 docker build -t xtrace-memory-support-agent .
 docker run -p 3000:3000 \
-  -e XTRACE_API_KEY=... \
+  -e XTRACE_API_KEY=*** \
   -e XTRACE_ORG_ID=... \
   -e XTRACE_APP_ID=xtrace-memory-support-agent \
   xtrace-memory-support-agent
 ```
 
-## API
+## Key design decisions
 
-- `POST /api/chat`
-  - body: `{ "userId", "convId", "message", "mode": "with_memory" | "stateless" }`
-- `GET /api/memory/:userId`
-  - returns active facts only
-- `GET /api/memory/:userId/timeline`
-  - returns all facts with `supersedes` + computed `replacedBy`
-- `POST /api/demo/run`
-  - runs 3-session scripted scenario
-- `DELETE /api/demo/reset?userId=customer_123`
-  - soft-deletes demo-scoped memories (scoped by `XTRACE_APP_ID`)
+**Memory as belief revision, not vector retrieval.** This demo intentionally does not store entire chat transcripts as "memory". Instead, it relies on XTrace's extraction pipeline to produce structured memories (facts with `supersedes` links) and XTrace's belief revision to keep the store clean as users correct themselves. This is the core differentiator.
 
-## Provenance / Timeline (CLI)
+**Stateless mode has no side effects.** The agent only writes to memory in `with_memory` mode. `stateless` mode skips both retrieve and ingest, making the before/after comparison honest.
 
-```bash
-npm run memory:timeline -- customer_123
-```
+**Graceful degradation.** If XTrace returns a 429 (rate limit) or other API error, the agent still returns a reply — the error is surfaced in `writeResult.error` but the conversation is not blocked.
 
-## Notes on “memory hygiene”
-
-This demo intentionally does **not** store entire chat transcripts as “memory”. Instead, it relies on XTrace’s extraction pipeline to produce structured memories (facts/episodes/artifacts) and XTrace’s belief revision to keep the store clean as users correct themselves.
+**IPv4 DNS fix.** Node's `undici` fetch resolves IPv6 first on some systems (WSL), which times out for `api.production.xtrace.ai`. The `xtrace-client.ts` injects a custom `fetch` that forces IPv4 via `node:https.Agent({ family: 4 })`.
 
 See:
-
 - `docs/pain-point.md`
 - `docs/architecture.md`
 - `docs/demo-script.md`
