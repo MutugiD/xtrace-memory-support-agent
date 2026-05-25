@@ -1,14 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Env } from "../config.js";
-import { MemoryService } from "../memory/memory-service.js";
+import { createMemoryService } from "../memory/memory-provider.js";
 
 const UserParamsSchema = z.object({
   userId: z.string().min(1)
 });
 
 export async function registerMemoryRoutes(app: FastifyInstance, env: Env) {
-  const memory = new MemoryService(env);
+  const memory = createMemoryService(env);
 
   app.get("/api/memory/:userId", async (req, reply) => {
     const params = UserParamsSchema.safeParse(req.params);
@@ -26,4 +26,3 @@ export async function registerMemoryRoutes(app: FastifyInstance, env: Env) {
     return reply.send({ userId: params.data.userId, timeline });
   });
 }
-

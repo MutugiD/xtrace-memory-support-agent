@@ -3,7 +3,8 @@ import type { Env } from "../config.js";
 import { needsMemory } from "./intent-classifier.js";
 import { buildSupportPrompt, type AgentMode } from "./prompt-builder.js";
 import { generateSupportReply } from "./response-generator.js";
-import { MemoryService } from "../memory/memory-service.js";
+import type { MemoryServiceLike } from "../memory/memory-provider.js";
+import { createMemoryService } from "../memory/memory-provider.js";
 
 export type ChatTurnResult = {
   reply: string;
@@ -23,15 +24,15 @@ export type ChatTurnResult = {
 };
 
 export class SupportAgent {
-  private readonly memory: Pick<MemoryService, "retrieveContext" | "ingestTurn">;
+  private readonly memory: Pick<MemoryServiceLike, "retrieveContext" | "ingestTurn">;
 
   constructor(
     private readonly env: Env,
     deps?: {
-      memoryService?: Pick<MemoryService, "retrieveContext" | "ingestTurn">;
+      memoryService?: Pick<MemoryServiceLike, "retrieveContext" | "ingestTurn">;
     }
   ) {
-    this.memory = deps?.memoryService ?? new MemoryService(env);
+    this.memory = deps?.memoryService ?? createMemoryService(env);
   }
 
   async handleChatTurn(params: {
@@ -42,8 +43,9 @@ export class SupportAgent {
   }): Promise<ChatTurnResult> {
     const shouldRetrieve = params.mode === "with_memory" && needsMemory(params.customerMessage);
 
+    const retrievalQuery = `${params.customerMessage}\n\nCustomer support context: plan, contact preference, current issue, accounting system, technical stack.`;
     const retrieved = shouldRetrieve
-      ? await this.memory.retrieveContext({ userId: params.userId, query: params.customerMessage })
+      ? await this.memory.retrieveContext({ userId: params.userId, convId: params.convId, query: retrievalQuery })
       : { contextPrompt: null, memories: [] as Memory[] };
 
     const llmMessages = buildSupportPrompt({
@@ -92,4 +94,3 @@ export class SupportAgent {
     };
   }
 }
-

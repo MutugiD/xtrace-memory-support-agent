@@ -1,5 +1,5 @@
 import { loadEnv } from "../config.js";
-import { MemoryService } from "../memory/memory-service.js";
+import { createMemoryService } from "../memory/memory-provider.js";
 import { runSupportDemo } from "./scenarios.js";
 
 function line(title: string) {
@@ -28,7 +28,7 @@ async function main() {
   const userId = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : "customer_123";
   const doReset = process.argv.includes("--reset");
 
-  const memory = new MemoryService(env);
+  const memory = createMemoryService(env);
   if (doReset) {
     line(`Reset (${userId})`);
     const res = await memory.resetUser({ userId });
@@ -66,4 +66,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
