@@ -1,5 +1,5 @@
 import { loadEnv } from "../config.js";
-import { MemoryService } from "../memory/memory-service.js";
+import { createMemoryService } from "../memory/memory-provider.js";
 
 function groupKey(status: string | null): "ACTIVE" | "SUPERSEDED" | "RETRACTED" | "UNKNOWN" {
   if (!status || status === "active") return "ACTIVE";
@@ -12,7 +12,7 @@ async function main() {
   const env = loadEnv();
   const userId = process.argv[2] ?? "customer_123";
 
-  const memory = new MemoryService(env);
+  const memory = createMemoryService(env);
   const timeline = await memory.buildTimeline({ userId });
 
   const groups: Record<string, typeof timeline> = { ACTIVE: [], SUPERSEDED: [], RETRACTED: [], UNKNOWN: [] };
@@ -42,4 +42,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

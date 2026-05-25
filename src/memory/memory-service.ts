@@ -89,13 +89,14 @@ export class MemoryService {
 
   async retrieveContext(params: {
     userId: string;
+    convId: string;
     query: string;
   }): Promise<{ contextPrompt: string | null; memories: Memory[]; stageTimings?: Record<string, number> }> {
     const client = this.client();
     const env = await client.memories.retrieve({
       query: params.query,
       limit: 12,
-      filters: { user_id: params.userId, app_id: this.env.XTRACE_APP_ID },
+      filters: { user_id: params.userId, conv_id: params.convId, app_id: this.env.XTRACE_APP_ID },
       include: ["context_prompt"]
     });
 
@@ -144,4 +145,3 @@ export class MemoryService {
     return { deleted: ids.length };
   }
 }
-

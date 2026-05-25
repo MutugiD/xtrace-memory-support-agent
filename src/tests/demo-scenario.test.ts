@@ -38,4 +38,3 @@ describe("support agent write result", () => {
     expect(res.writeResult.supersededBy.mem_old).toBe("mem_new");
   });
 });
-

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Env } from "../config.js";
-import { MemoryService } from "../memory/memory-service.js";
+import { createMemoryService } from "../memory/memory-provider.js";
 import { runSupportDemo } from "../demo/scenarios.js";
 
 const DemoRunBodySchema = z
@@ -11,7 +11,7 @@ const DemoRunBodySchema = z
   .default({});
 
 export async function registerDemoRoutes(app: FastifyInstance, env: Env) {
-  const memory = new MemoryService(env);
+  const memory = createMemoryService(env);
 
   app.post("/api/demo/run", async (req, reply) => {
     const parsed = DemoRunBodySchema.safeParse(req.body ?? {});
@@ -27,4 +27,3 @@ export async function registerDemoRoutes(app: FastifyInstance, env: Env) {
     return reply.send({ userId, ...result });
   });
 }
-

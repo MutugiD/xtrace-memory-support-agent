@@ -49,6 +49,7 @@ Set:
 Optional:
 
 - `OPENAI_API_KEY` (if omitted, replies are deterministic templates; memory behavior is still real)
+- `XTRACE_MOCK=1` (runs fully offline if you hit XTrace write caps; useful for local testing/CI)
 
 ### 3) Run scripted demo (CLI)
 

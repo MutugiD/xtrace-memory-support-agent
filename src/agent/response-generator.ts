@@ -59,13 +59,27 @@ export async function generateSupportReply(
   }
 ): Promise<{ reply: string; usedLlm: boolean }> {
   if (env.OPENAI_API_KEY) {
-    if (!process.env.OPENAI_API_KEY) process.env.OPENAI_API_KEY = env.OPENAI_API_KEY;
-    const result = await generateText({
-      model: openai(env.OPENAI_MODEL),
-      messages: params.llmMessages,
-      temperature: 0.3
-    });
-    return { reply: result.text, usedLlm: true };
+    try {
+      if (!process.env.OPENAI_API_KEY) process.env.OPENAI_API_KEY = env.OPENAI_API_KEY;
+      const result = await generateText({
+        model: openai(env.OPENAI_MODEL),
+        messages: params.llmMessages,
+        temperature: 0.3
+      });
+      return { reply: result.text, usedLlm: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[warn] LLM unavailable; falling back to deterministic reply: ${message}`);
+      return {
+        reply: deterministicReply({
+          mode: params.mode,
+          customerMessage: params.customerMessage,
+          memoryContextPrompt: params.memoryContextPrompt,
+          retrievedMemories: params.retrievedMemories
+        }),
+        usedLlm: false
+      };
+    }
   }
 
   return {
@@ -78,4 +92,3 @@ export async function generateSupportReply(
     usedLlm: false
   };
 }
-
