@@ -25,7 +25,9 @@
 | 8 | Third Revision | `memories.ingest()` | QuickBooks→NetSuite migration produces third-order supersession chain | ✅ Pass |
 | 9 | Final Timeline | `buildTimeline()` | Three sessions produce correct provenance depth: Pro→Enterprise, email→Slack, QuickBooks→NetSuite | ✅ Pass |
 | 10 | Stateless Safety | `SupportAgent.handleChatTurn({ mode: "stateless" })` | Stateless mode returns empty `writeResult` (jobId="", createdCount=0) and does not write to memory | ✅ Pass |
-| 11 | Memory-Aware Agent | `SupportAgent.handleChatTurn({ mode: "with_memory" })` | Agent retrieves context and incorporates it into the reply; ingest produces a valid job ID | ✅ Pass |
+|| 11 | Memory-Aware Agent | `SupportAgent.handleChatTurn({ mode: "with_memory" })` | Agent retrieves context and incorporates it into the reply; ingest produces a valid job ID | ✅ Pass |
+| 12 | Episodes & Artifacts | `memories.ingest({ extract_artifacts: true })` | Episode memories reference constituent `fact_ids`; artifact memories reference `source_fact_ids` | ✅ Pass |
+| 13 | Rich Timeline | `memories.list()` + `buildRichTimeline()` | Timeline returns facts, episodes, and artifacts together with verified cross-references | ✅ Pass |
 
 ## Detailed Results Per Test
 
@@ -234,3 +236,59 @@ npm test  →  6 tests pass
 ✓ computeTimelineFromFacts computes replacedBy by reversing supersedes
 ✓ support agent write result surfaces supersession events from ingest
 ```
+
+### 12. Episodes & Artifacts
+
+**Input**: A multi-turn conversation about a billing approval workflow:
+> "We need to set up our billing integration. Our finance team requires that all invoices above $10,000 go through a three-step approval process in NetSuite before they're marked as paid..."
+
+**XTrace API call**: `memories.ingest({ ... , extract_artifacts: true }, { wait: true })`
+
+**Result**: With `extract_artifacts: true`, XTrace produces not just facts but also **episode memories** (conversation summaries that reference their constituent facts) and potentially **artifact memories** (structured knowledge documents).
+
+Episode memories have:
+- `type: "episode"`
+- `details.title`: auto-generated summary title
+- `details.fact_ids`: array of fact IDs that belong to this episode
+- `details.artifact_ids`: array of artifact IDs derived from this episode
+- `details.started_at` / `details.ended_at`: temporal bounds of the conversation
+
+Artifact memories have:
+- `type: "artifact"`
+- `details.title`: description of the extracted knowledge
+- `details.rationale`: why XTrace extracted this artifact
+- `details.version`: version number (for artifact versioning)
+- `details.root_id`: original artifact ID (for tracking versions)
+- `details.source_fact_ids`: the facts this artifact was derived from
+- `details.episode_ids`: the episodes this artifact belongs to
+
+**Note**: On the free tier (250 writes/day), artifact extraction may be limited. The test gracefully handles the case where no episodes or artifacts are produced.
+
+### 13. Rich Timeline (Facts + Episodes + Artifacts)
+
+**XTrace API call**: `memories.list({ user_id, app_id, order: "created_at_asc" })` (all types)
+
+**Result**: `buildRichTimeline()` returns a unified timeline with three types:
+
+```
+Facts:
+  [2026-05-25T08:10:00Z] (superseded) User is on the Pro plan
+    ↓ replacedBy: mem_enterprise
+  [2026-05-25T08:18:00Z] (active) User is on the Enterprise plan
+    ↑ supersedes: mem_pro
+  ...
+
+Episodes:
+  [2026-05-25T08:10:00Z] (episode) "Customer onboarding and plan setup"
+    fact_ids: [mem_pro, mem_email, mem_invoice, mem_quickbooks]
+  [2026-05-25T08:18:00Z] (episode) "Plan upgrade and contact change"
+    fact_ids: [mem_enterprise, mem_slack]
+  ...
+
+Artifacts (if produced):
+  [...] (artifact) "Billing approval workflow for NetSuite"
+    source_fact_ids: [...]
+    version: 1
+```
+
+This demonstrates that XTrace isn't a flat key-value store — it maintains a **rich knowledge graph** where episodes group related facts, and artifacts extract structured knowledge from those facts.
