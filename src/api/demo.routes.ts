@@ -10,6 +10,10 @@ const DemoRunBodySchema = z
   })
   .default({});
 
+const DemoResetQuerySchema = z.object({
+  userId: z.string().min(1).default("customer_123")
+});
+
 export async function registerDemoRoutes(app: FastifyInstance, env: Env) {
   const memory = createMemoryService(env);
 
@@ -22,7 +26,10 @@ export async function registerDemoRoutes(app: FastifyInstance, env: Env) {
   });
 
   app.delete("/api/demo/reset", async (req, reply) => {
-    const userId = typeof (req.query as any)?.userId === "string" ? (req.query as any).userId : "customer_123";
+    const parsed = DemoResetQuerySchema.safeParse(req.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+
+    const userId = parsed.data.userId;
     const result = await memory.resetUser({ userId });
     return reply.send({ userId, ...result });
   });

@@ -7,6 +7,11 @@ const UserParamsSchema = z.object({
   userId: z.string().min(1)
 });
 
+const FactParamsSchema = z.object({
+  userId: z.string().min(1),
+  factId: z.string().min(1)
+});
+
 export async function registerMemoryRoutes(app: FastifyInstance, env: Env) {
   const memory = createMemoryService(env);
 
@@ -24,5 +29,20 @@ export async function registerMemoryRoutes(app: FastifyInstance, env: Env) {
 
     const timeline = await memory.buildTimeline({ userId: params.data.userId });
     return reply.send({ userId: params.data.userId, timeline });
+  });
+
+  app.get("/api/memory/:userId/facts/:factId", async (req, reply) => {
+    const params = FactParamsSchema.safeParse(req.params);
+    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
+
+    try {
+      const fact = await memory.getMemoryById(params.data.factId);
+      return reply.send({ fact });
+    } catch (err: any) {
+      if (err?.message?.includes("not found") || err?.status === 404) {
+        return reply.code(404).send({ error: "Memory not found" });
+      }
+      return reply.code(500).send({ error: err?.message ?? "Internal error" });
+    }
   });
 }

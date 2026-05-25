@@ -1,4 +1,4 @@
-import type { Memory, MemoryStatus } from "@xtraceai/memory";
+import type { Memory } from "@xtraceai/memory";
 import { createMemoryClient } from "./xtrace-client.js";
 import type { Env } from "../config.js";
 import type { ConversationMessage, MemoryWriteResult } from "./memory-types.js";
@@ -10,14 +10,14 @@ export type TimelineEvent = {
   updatedAt: string;
   convId: string | null;
   text: string;
-  status: MemoryStatus | null;
+  status: string | null;
   supersedes: string | null;
   replacedBy: string | null;
   factType: string | null;
   sourceRole: string | null;
 };
 
-function isActiveStatus(status: MemoryStatus | null): boolean {
+function isActiveStatus(status: string | null): boolean {
   return status === "active" || status === null;
 }
 
@@ -38,11 +38,11 @@ export function computeTimelineFromFacts(allFacts: Memory[]): TimelineEvent[] {
       updatedAt: m.updated_at,
       convId: m.conv_id,
       text: m.text,
-      status: m.details?.status ?? null,
-      supersedes: m.details?.supersedes ?? null,
+      status: (m.details as any)?.status ?? null,
+      supersedes: (m.details as any)?.supersedes ?? null,
       replacedBy: replacedBy.get(m.id) ?? null,
-      factType: m.details?.fact_type ?? null,
-      sourceRole: m.details?.source_role ?? null
+      factType: (m.details as any)?.fact_type ?? null,
+      sourceRole: (m.details as any)?.source_role ?? null
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
@@ -59,6 +59,7 @@ export class MemoryService {
     convId: string;
     messages: ConversationMessage[];
     metadata?: Record<string, unknown>;
+    extractArtifacts?: boolean;
   }): Promise<MemoryWriteResult> {
     const client = this.client();
     const job = await client.memories.ingest(
@@ -67,7 +68,8 @@ export class MemoryService {
         conv_id: params.convId,
         app_id: this.env.XTRACE_APP_ID,
         metadata: params.metadata ?? {},
-        messages: toXtraceMessages(params.messages)
+        messages: toXtraceMessages(params.messages),
+        extract_artifacts: params.extractArtifacts ?? false
       },
       { wait: true }
     );
@@ -116,11 +118,17 @@ export class MemoryService {
       if (memory.type !== "fact") continue;
       if (params.includeSuperseded) facts.push(memory);
       else {
-        const status = memory.details?.status ?? null;
+        const status = (memory.details as any)?.status ?? null;
         if (isActiveStatus(status)) facts.push(memory);
       }
     }
     return facts;
+  }
+
+  /** Fetch a single memory by ID with full provenance details. */
+  async getMemoryById(memoryId: string): Promise<Memory> {
+    const client = this.client();
+    return client.memories.get(memoryId);
   }
 
   async buildTimeline(params: { userId: string }): Promise<TimelineEvent[]> {
