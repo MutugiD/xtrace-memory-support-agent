@@ -17,7 +17,7 @@ const ipv4HttpAgent = new http.Agent({ family: 4, keepAlive: true });
  * systems (WSL), causing timeouts to api.production.xtrace.ai.
  */
 function createIpv4Fetch(): typeof globalThis.fetch {
-  return async function xtraceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return async function xtraceFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
     const url = typeof input === "string" ? new URL(input) : input instanceof URL ? input : new URL(input.url);
     const method = init?.method ?? (input instanceof Request ? input.method : "GET");
     const hdrs: Record<string, string> = {};
