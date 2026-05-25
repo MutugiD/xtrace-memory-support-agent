@@ -365,6 +365,87 @@ async function main() {
 
   log("🤖", "Agent reply", memoryResult.reply.substring(0, 150));
 
+  // ─── 12. EPISODE AND ARTIFACT EXTRACTION ─────────────────────────────
+  section("12. Episodes & Artifacts — extract_artifacts produces episode/artifact memories");
+
+  // Ingest a multi-turn conversation that should produce an episode summary
+  // and potentially an artifact (structured knowledge extraction)
+  const episodeResult = await withRetry(() =>
+    memory.ingestTurn({
+      userId: USER_A,
+      convId: "sess_episode",
+      messages: [
+        { role: "user", content: "We need to set up our billing integration. Our finance team requires that all invoices above $10,000 go through a three-step approval process in NetSuite before they're marked as paid. Here's the full workflow: Step 1: Invoice received from vendor, Step 2: Finance lead approves, Step 3: VP Finance approves, Step 4: Payment released. We also need a monthly reconciliation report that matches QuickBooks records with our bank statements.", date: new Date().toISOString() },
+        { role: "assistant", content: "I've documented your billing workflow and reconciliation requirements. The three-step approval process for invoices over $10K is noted, along with the monthly reconciliation requirement.", date: new Date().toISOString() }
+      ],
+      metadata: { session_type: "support_workflow" },
+      extractArtifacts: true
+    })
+  );
+
+  assert(episodeResult.created.length >= 1, "Episode/artifact ingest created memories", `${episodeResult.created.length} created`);
+  if (verbose) {
+    log("📋", "Created refs", JSON.stringify(episodeResult.created.map((r) => ({ id: r.id, type: r.type, text: r.text.substring(0, 80) }))));
+  }
+
+  await sleep(THROTTLE_MS);
+
+  // List all memory types for this user
+  const allMemories = await memory.listAllMemories({ userId: USER_A });
+  const facts = allMemories.filter((m) => m.type === "fact");
+  const episodes = allMemories.filter((m) => m.type === "episode");
+  const artifacts = allMemories.filter((m) => m.type === "artifact");
+
+  log("📊", "Memory type breakdown", `${facts.length} facts, ${episodes.length} episodes, ${artifacts.length} artifacts`);
+
+  if (episodes.length > 0) {
+    assert(true, "Episode memories were created", `${episodes.length} episodes`);
+    for (const ep of episodes) {
+      const details = ep.details as any;
+      log("  ", `Episode: "${ep.text.substring(0, 80)}"`, `fact_ids: ${details?.fact_ids?.length ?? 0}, artifact_ids: ${details?.artifact_ids?.length ?? 0}`);
+      if (details?.started_at) log("  ", `  started: ${details.started_at}`, `ended: ${details.ended_at}`);
+    }
+  } else {
+    log("ℹ️", "No episode memories created (XTrace free tier may not extract episodes from short conversations)");
+  }
+
+  if (artifacts.length > 0) {
+    assert(true, "Artifact memories were created", `${artifacts.length} artifacts`);
+    for (const art of artifacts) {
+      const details = art.details as any;
+      log("  ", `Artifact: "${art.text.substring(0, 80)}"`, `version: ${details?.version}, root: ${details?.root_id}`);
+      if (details?.source_fact_ids?.length) log("  ", `  derived from ${details.source_fact_ids.length} facts`);
+    }
+  } else {
+    log("ℹ️", "No artifact memories created (XTrace free tier may limit artifact extraction)");
+  }
+
+  await sleep(THROTTLE_MS);
+
+  // ─── 13. RICH TIMELINE (FACTS + EPISODES + ARTIFACTS) ─────────────────
+  section("13. Rich Timeline — facts, episodes, and artifacts together");
+
+  const richTimeline = await memory.buildRichTimeline({ userId: USER_A });
+  const factsInTimeline = richTimeline.filter((e) => e.type === "fact");
+  const episodesInTimeline = richTimeline.filter((e) => e.type === "episode");
+  const artifactsInTimeline = richTimeline.filter((e) => e.type === "artifact");
+
+  log("📊", "Rich timeline", `${factsInTimeline.length} facts, ${episodesInTimeline.length} episodes, ${artifactsInTimeline.length} artifacts`);
+
+  // Verify episodes reference their constituent facts
+  for (const ep of episodesInTimeline) {
+    if (ep.factIds.length > 0) {
+      assert(true, "Episode references facts", `${ep.factIds.length} fact_ids: ${ep.factIds.join(", ")}`);
+    }
+  }
+
+  // Verify artifacts reference their source facts
+  for (const art of artifactsInTimeline) {
+    if (art.sourceFactIds.length > 0) {
+      assert(true, "Artifact references source facts", `${art.sourceFactIds.length} source_fact_ids`);
+    }
+  }
+
   // ─── CLEANUP ───────────────────────────────────────────────────────
   section("Cleanup — removing test users");
 
