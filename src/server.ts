@@ -1,3 +1,12 @@
+// Force IPv4 for XTrace API calls — in WSL and some Linux environments,
+// Node's undici-based fetch resolves IPv6 first and times out connecting
+// to api.production.xtrace.ai. We patch globalThis.fetch to force IPv4.
+//
+// This MUST be imported before any XTrace SDK code runs.
+import * as dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+
+import "dotenv/config";
 import path from "node:path";
 import fs from "node:fs";
 import Fastify from "fastify";
@@ -41,4 +50,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

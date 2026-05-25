@@ -19,3 +19,21 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  sdk-feature-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run XTrace SDK feature tests
+        env:
+          XTRACE_API_KEY: ${{ secrets.XTRACE_API_KEY }}
+          XTRACE_ORG_ID: ${{ secrets.XTRACE_ORG_ID }}
+          XTRACE_APP_ID: xtrace-memory-support-agent-ci
+          XTRACE_MOCK: "false"
+        run: npm run test:sdk:reset
