@@ -40,7 +40,9 @@ Required for live XTrace:
 
 Optional:
 - `OPENAI_API_KEY` (if omitted or unavailable, replies fall back to deterministic templates)
-- `XTRACE_MOCK=1` (offline mode for local testing; does not call the live XTrace API)
+- `MEMORY_BACKEND=local|mock|xtrace` (default: `local`)
+- `LOCAL_DB_PATH=./data/memory.sqlite` (used when `MEMORY_BACKEND=local`)
+- `XTRACE_MOCK=1` (legacy alias for `MEMORY_BACKEND=mock`)
 
 ### 3) Scripted demo (CLI)
 
