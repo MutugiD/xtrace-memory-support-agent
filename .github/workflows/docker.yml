@@ -13,6 +13,13 @@ permissions:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image_name: ghcr.io/${{ github.repository }}-support
+            target: support-runtime
+          - image_name: ghcr.io/${{ github.repository }}-reconciliation
+            target: reconciliation-runtime
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -25,7 +32,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ matrix.image_name }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -33,9 +40,9 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          target: ${{ matrix.target }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
