@@ -218,3 +218,12 @@ Additional docs:
 - `docs/security-tenant-isolation.md`
 - `docs/reconciliation-runbook.md`
 - `docs/actual-data-testing.md`
+
+### Delivery checks
+
+- `npm run lint`
+- `npm run test:baseline`
+- `npm run test:reconciliation`
+- `npm run build`
+
+GitHub Actions now enforces linting, test/build validation, dependency audit, and CodeQL analysis for pull requests into `main`.

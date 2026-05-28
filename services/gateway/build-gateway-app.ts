@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { createReconciliationContainer, type ReconciliationContainer } from "./service-container.js";
 import { assertRoleAllowed } from "../shared/security.js";
-import type { ConnectionMode, ProviderName, ServiceRole } from "../shared/types.js";
+import type { ConnectionMode, ProviderName } from "../shared/types.js";
 
 const RoleSchema = z.enum(["admin", "operator", "reviewer", "read_only"]);
 const ProviderSchema = z.enum(["quickbooks", "zoho"]);

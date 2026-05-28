@@ -13,6 +13,8 @@ The reconciliation services ship with secure local defaults for development and 
   - `reviewer`
   - `read_only`
 - Idempotency keys are supported for reconciliation run creation
+- GitHub Actions runs linting, dependency audit, and CodeQL analysis on pull requests into `main`
+- Dependabot is configured for npm and GitHub Actions updates
 
 ## Operational expectations
 

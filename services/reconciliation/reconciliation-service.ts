@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { JsonFileStore } from "../shared/file-store.js";
 import type {
+  FinanceBelief,
   ProviderDataset,
   ProviderName,
   ReconciliationMismatch,
@@ -35,7 +36,7 @@ export class ReconciliationService {
     tenantId: string;
     providers: ProviderName[];
     datasets: Record<ProviderName, ProviderDataset>;
-    contextBeliefs: import("../shared/types.js").FinanceBelief[];
+    contextBeliefs: FinanceBelief[];
     startedBy: string;
     idempotencyKey?: string;
   }) {
