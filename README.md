@@ -130,19 +130,28 @@ See `docs/sdk-features-tests.md` for detailed per-test results.
 
 ## CI/CD
 
-- CI: `.github/workflows/ci.yml` runs `npm ci`, `npm test`, `npm run build` on PRs and pushes to `main`.
+- CI: `.github/workflows/ci.yml` runs `npm run lint`, `npm run test:baseline`, `npm run test:reconciliation`, `npm run build`, and a production dependency audit on PRs and pushes to `main`.
+- Security analysis: `.github/workflows/codeql.yml` runs CodeQL on PRs, pushes to `main`, and a weekly schedule.
 - SDK tests: `.github/workflows/sdk-tests.yml` runs live XTrace API tests on pushes to `main` (requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` secrets).
-- CD: `.github/workflows/docker.yml` builds and pushes a Docker image to GHCR on pushes to `main` (and on tags `v*`).
+- CD: `.github/workflows/docker.yml` builds and pushes two GHCR images on pushes to `main` and tags:
+  - support app image
+  - reconciliation gateway image
 
 ### Run via Docker
 
 ```bash
-docker build -t xtrace-memory-support-agent .
+docker build --target support-runtime -t xtrace-memory-support-agent .
 docker run -p 3000:3000 \
   -e XTRACE_API_KEY=*** \
   -e XTRACE_ORG_ID=... \
   -e XTRACE_APP_ID=xtrace-memory-support-agent \
   xtrace-memory-support-agent
+
+docker build --target reconciliation-runtime -t xtrace-reconciliation-gateway .
+docker run -p 3400:3400 \
+  -e RECONCILIATION_DATA_DIR=/app/data/reconciliation \
+  -e SERVICE_TOKEN_SECRET=change-me \
+  xtrace-reconciliation-gateway
 ```
 
 ## Key design decisions
