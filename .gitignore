@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-services/
+data/
 .env
 .env.*
 !.env.example
@@ -7,4 +9,3 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
-

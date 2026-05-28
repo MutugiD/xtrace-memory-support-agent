@@ -1,0 +1,173 @@
+{
+  "company": {
+    "name": "Acme Supplies Holdings"
+  },
+  "accounts": [
+    {
+      "Id": "QB-ACC-100",
+      "AcctNum": "4000",
+      "Name": "Accounts Receivable",
+      "AccountType": "Accounts Receivable",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T08:00:00Z"
+      }
+    },
+    {
+      "Id": "QB-ACC-200",
+      "AcctNum": "1000",
+      "Name": "Operating Cash",
+      "AccountType": "Bank",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T08:00:00Z"
+      }
+    }
+  ],
+  "invoices": [
+    {
+      "Id": "QB-INV-1001",
+      "DocNumber": "INV-1001",
+      "CustomerRef": {
+        "name": "Acme Supplies"
+      },
+      "TotalAmt": 1200,
+      "Balance": 0,
+      "CurrencyRef": {
+        "value": "USD"
+      },
+      "TxnDate": "2026-05-20",
+      "DueDate": "2026-05-27",
+      "PrivateNote": "Friday sync critical",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T10:00:00Z"
+      }
+    },
+    {
+      "Id": "QB-INV-1002",
+      "DocNumber": "INV-1002",
+      "CustomerRef": {
+        "name": "Acme Supplies"
+      },
+      "TotalAmt": 500,
+      "Balance": 0,
+      "CurrencyRef": {
+        "value": "USD"
+      },
+      "TxnDate": "2026-05-21",
+      "DueDate": "2026-05-28",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T10:15:00Z"
+      }
+    },
+    {
+      "Id": "QB-INV-1003",
+      "DocNumber": "INV-1003",
+      "CustomerRef": {
+        "name": "Beta Hardware"
+      },
+      "TotalAmt": 750,
+      "Balance": 100,
+      "CurrencyRef": {
+        "value": "USD"
+      },
+      "TxnDate": "2026-05-22",
+      "DueDate": "2026-05-29",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T10:30:00Z"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "Id": "QB-PAY-5001",
+      "PaymentRefNum": "PAY-1001",
+      "TotalAmt": 1200,
+      "TxnDate": "2026-05-23",
+      "Line": [
+        {
+          "LinkedTxn": [
+            {
+              "TxnId": "INV-1001"
+            }
+          ]
+        }
+      ],
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T11:00:00Z"
+      }
+    },
+    {
+      "Id": "QB-PAY-5002",
+      "PaymentRefNum": "PAY-1002",
+      "TotalAmt": 500,
+      "TxnDate": "2026-05-24",
+      "Line": [
+        {
+          "LinkedTxn": [
+            {
+              "TxnId": "INV-1002"
+            }
+          ]
+        }
+      ],
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T11:05:00Z"
+      }
+    },
+    {
+      "Id": "QB-PAY-5003",
+      "PaymentRefNum": "PAY-1002",
+      "TotalAmt": 500,
+      "TxnDate": "2026-05-24",
+      "Line": [
+        {
+          "LinkedTxn": [
+            {
+              "TxnId": "INV-1002"
+            }
+          ]
+        }
+      ],
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T11:06:00Z"
+      }
+    }
+  ],
+  "journalEntries": [
+    {
+      "Id": "QB-JE-1",
+      "DocNumber": "JE-1001",
+      "TotalAmt": 1200,
+      "CurrencyRef": {
+        "value": "USD"
+      },
+      "TxnDate": "2026-05-24",
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T11:30:00Z"
+      }
+    }
+  ],
+  "customers": [
+    {
+      "Id": "QB-CUST-1",
+      "DisplayName": "Acme Supplies",
+      "PrimaryEmailAddr": {
+        "Address": "billing@acme.test"
+      },
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T12:00:00Z"
+      }
+    }
+  ],
+  "vendors": [
+    {
+      "Id": "QB-VEND-1",
+      "DisplayName": "Friday Cloud Services",
+      "PrimaryEmailAddr": {
+        "Address": "ap@fridaycloud.test"
+      },
+      "MetaData": {
+        "LastUpdatedTime": "2026-05-24T12:30:00Z"
+      }
+    }
+  ]
+}

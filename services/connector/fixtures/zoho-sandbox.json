@@ -1,0 +1,102 @@
+{
+  "organization": {
+    "name": "Acme Supplies Holdings"
+  },
+  "chart_of_accounts": [
+    {
+      "account_id": "ZO-ACC-100",
+      "account_code": "4000",
+      "account_name": "Accounts Receivable",
+      "account_type": "accounts_receivable",
+      "last_modified_time": "2026-05-24T08:00:00Z"
+    },
+    {
+      "account_id": "ZO-ACC-200",
+      "account_code": "1000",
+      "account_name": "Operating Cash",
+      "account_type": "cash",
+      "last_modified_time": "2026-05-24T08:00:00Z"
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_id": "ZO-INV-1001",
+      "invoice_number": "INV-1001",
+      "customer_name": "Acme Supplies",
+      "total": 1200,
+      "balance": 0,
+      "currency_code": "USD",
+      "date": "2026-05-20",
+      "due_date": "2026-05-27",
+      "last_modified_time": "2026-05-24T10:00:00Z"
+    },
+    {
+      "invoice_id": "ZO-INV-1002",
+      "invoice_number": "INV-1002",
+      "customer_name": "Acme Supplies",
+      "total": 505,
+      "balance": 5,
+      "currency_code": "USD",
+      "date": "2026-05-21",
+      "due_date": "2026-05-28",
+      "last_modified_time": "2026-05-24T10:15:00Z"
+    },
+    {
+      "invoice_id": "ZO-INV-1004",
+      "invoice_number": "INV-1004",
+      "customer_name": "Gamma Labs",
+      "total": 300,
+      "balance": 300,
+      "currency_code": "USD",
+      "date": "2026-05-23",
+      "due_date": "2026-05-30",
+      "last_modified_time": "2026-05-24T10:45:00Z"
+    }
+  ],
+  "customer_payments": [
+    {
+      "payment_id": "ZO-PAY-7001",
+      "reference_number": "PAY-1001",
+      "amount": 1200,
+      "currency_code": "USD",
+      "date": "2026-05-23",
+      "invoice_numbers": ["INV-1001"],
+      "last_modified_time": "2026-05-24T11:00:00Z"
+    },
+    {
+      "payment_id": "ZO-PAY-7002",
+      "reference_number": "PAY-1002",
+      "amount": 505,
+      "currency_code": "USD",
+      "date": "2026-05-24",
+      "invoice_numbers": ["INV-1002"],
+      "last_modified_time": "2026-05-24T11:05:00Z"
+    }
+  ],
+  "journals": [
+    {
+      "journal_id": "ZO-JR-1",
+      "reference_number": "JE-1001",
+      "total": 1200,
+      "currency_code": "USD",
+      "date": "2026-05-24",
+      "last_modified_time": "2026-05-24T11:30:00Z"
+    }
+  ],
+  "contacts": [
+    {
+      "contact_id": "ZO-CUST-1",
+      "contact_name": "Acme Supplies",
+      "email": "billing@acme.test",
+      "last_modified_time": "2026-05-24T12:00:00Z"
+    }
+  ],
+  "vendors": [
+    {
+      "vendor_id": "ZO-VEND-1",
+      "vendor_name": "Friday Cloud Services",
+      "email": "ap@fridaycloud.test",
+      "last_modified_time": "2026-05-24T12:30:00Z"
+    }
+  ]
+}

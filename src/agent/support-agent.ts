@@ -51,9 +51,18 @@ export class SupportAgent {
     const shouldRetrieve = params.mode === "with_memory" && needsMemory(params.customerMessage);
 
     const retrievalQuery = `${params.customerMessage}\n\nCustomer support context: plan, contact preference, current issue, accounting system, technical stack.`;
-    const retrieved = shouldRetrieve
-      ? await this.memory.retrieveContext({ userId: params.userId, convId: params.convId, query: retrievalQuery })
-      : { contextPrompt: null as string | null, memories: [] as Memory[] };
+    let retrieved: { contextPrompt: string | null; memories: Memory[] };
+    if (!shouldRetrieve) {
+      retrieved = { contextPrompt: null, memories: [] as Memory[] };
+    } else {
+      try {
+        retrieved = await this.memory.retrieveContext({ userId: params.userId, convId: params.convId, query: retrievalQuery });
+      } catch (err: any) {
+        const message = err?.message ?? String(err);
+        console.warn(`[warn] memory.retrieveContext failed; continuing without context: ${message}`);
+        retrieved = { contextPrompt: null, memories: [] as Memory[] };
+      }
+    }
 
     const llmMessages = buildSupportPrompt({
       mode: params.mode,

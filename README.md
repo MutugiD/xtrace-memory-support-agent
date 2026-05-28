@@ -40,7 +40,9 @@ Required for live XTrace:
 
 Optional:
 - `OPENAI_API_KEY` (if omitted or unavailable, replies fall back to deterministic templates)
-- `XTRACE_MOCK=1` (offline mode for local testing; does not call the live XTrace API)
+- `MEMORY_BACKEND=local|mock|xtrace` (default: `local`)
+- `LOCAL_DB_PATH=./data/memory.sqlite` (used when `MEMORY_BACKEND=local`)
+- `XTRACE_MOCK=1` (legacy alias for `MEMORY_BACKEND=mock`)
 
 ### 3) Scripted demo (CLI)
 
@@ -128,19 +130,28 @@ See `docs/sdk-features-tests.md` for detailed per-test results.
 
 ## CI/CD
 
-- CI: `.github/workflows/ci.yml` runs `npm ci`, `npm test`, `npm run build` on PRs and pushes to `main`.
+- CI: `.github/workflows/ci.yml` runs `npm run lint`, `npm run test:baseline`, `npm run test:reconciliation`, `npm run build`, and a production dependency audit on PRs and pushes to `main`.
+- Security analysis: `.github/workflows/codeql.yml` runs CodeQL on PRs, pushes to `main`, and a weekly schedule.
 - SDK tests: `.github/workflows/sdk-tests.yml` runs live XTrace API tests on pushes to `main` (requires `XTRACE_API_KEY` and `XTRACE_ORG_ID` secrets).
-- CD: `.github/workflows/docker.yml` builds and pushes a Docker image to GHCR on pushes to `main` (and on tags `v*`).
+- CD: `.github/workflows/docker.yml` builds and pushes two GHCR images on pushes to `main` and tags:
+  - support app image
+  - reconciliation gateway image
 
 ### Run via Docker
 
 ```bash
-docker build -t xtrace-memory-support-agent .
+docker build --target support-runtime -t xtrace-memory-support-agent .
 docker run -p 3000:3000 \
   -e XTRACE_API_KEY=*** \
   -e XTRACE_ORG_ID=... \
   -e XTRACE_APP_ID=xtrace-memory-support-agent \
   xtrace-memory-support-agent
+
+docker build --target reconciliation-runtime -t xtrace-reconciliation-gateway .
+docker run -p 3400:3400 \
+  -e RECONCILIATION_DATA_DIR=/app/data/reconciliation \
+  -e SERVICE_TOKEN_SECRET=change-me \
+  xtrace-reconciliation-gateway
 ```
 
 ## Key design decisions
@@ -160,3 +171,68 @@ See:
 - `docs/architecture.md`
 - `docs/demo-script.md`
 - `docs/sdk-features-tests.md`
+
+## Reconciliation microservices
+
+This repo now also includes an additive reconciliation layer under `services/` for QuickBooks + Zoho workflows. The existing support-memory app and its baseline tests remain unchanged; the reconciliation services are separate and use their own local finance memory domain.
+
+### New services
+
+- `services/gateway` — public entrypoint for reconciliation clients
+- `services/connector` — QuickBooks and Zoho adapters plus connection storage
+- `services/reconciliation` — matching engine, mismatch tracking, and report export
+- `services/finance-memory` — tenant-scoped operational memory for mappings, tolerances, and prior resolutions
+- `services/workflow` — orchestration for sync → reconcile → resolve
+- `services/audit` — audit log and report timeline
+
+### Reconciliation quickstart
+
+```bash
+npm run demo:reconciliation
+```
+
+Run the reconciliation gateway:
+
+```bash
+npm run dev:reconciliation
+```
+
+Open the gateway on `http://localhost:3400/health`.
+
+### Reconciliation routes
+
+- `POST /api/reconciliation/connectors/connect`
+- `POST /api/reconciliation/connectors/:provider/sync`
+- `POST /api/reconciliation/memory/beliefs`
+- `GET /api/reconciliation/memory`
+- `GET /api/reconciliation/memory/timeline`
+- `POST /api/reconciliation/runs`
+- `GET /api/reconciliation/runs`
+- `GET /api/reconciliation/runs/:runId`
+- `POST /api/reconciliation/mismatches/:mismatchId/resolve`
+- `GET /api/reconciliation/reports/:runId`
+- `GET /api/reconciliation/audit`
+
+### Reconciliation testing
+
+- Preserve baseline support-memory coverage:
+  - `npm run test:baseline`
+- Run additive reconciliation suites:
+  - `npm run test:reconciliation`
+
+Additional docs:
+- `docs/reconciliation-architecture.md`
+- `docs/connector-onboarding.md`
+- `docs/finance-memory-model.md`
+- `docs/security-tenant-isolation.md`
+- `docs/reconciliation-runbook.md`
+- `docs/actual-data-testing.md`
+
+### Delivery checks
+
+- `npm run lint`
+- `npm run test:baseline`
+- `npm run test:reconciliation`
+- `npm run build`
+
+GitHub Actions now enforces linting, test/build validation, dependency audit, and CodeQL analysis for pull requests into `main`.
