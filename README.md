@@ -162,3 +162,59 @@ See:
 - `docs/architecture.md`
 - `docs/demo-script.md`
 - `docs/sdk-features-tests.md`
+
+## Reconciliation microservices
+
+This repo now also includes an additive reconciliation layer under `services/` for QuickBooks + Zoho workflows. The existing support-memory app and its baseline tests remain unchanged; the reconciliation services are separate and use their own local finance memory domain.
+
+### New services
+
+- `services/gateway` — public entrypoint for reconciliation clients
+- `services/connector` — QuickBooks and Zoho adapters plus connection storage
+- `services/reconciliation` — matching engine, mismatch tracking, and report export
+- `services/finance-memory` — tenant-scoped operational memory for mappings, tolerances, and prior resolutions
+- `services/workflow` — orchestration for sync → reconcile → resolve
+- `services/audit` — audit log and report timeline
+
+### Reconciliation quickstart
+
+```bash
+npm run demo:reconciliation
+```
+
+Run the reconciliation gateway:
+
+```bash
+npm run dev:reconciliation
+```
+
+Open the gateway on `http://localhost:3400/health`.
+
+### Reconciliation routes
+
+- `POST /api/reconciliation/connectors/connect`
+- `POST /api/reconciliation/connectors/:provider/sync`
+- `POST /api/reconciliation/memory/beliefs`
+- `GET /api/reconciliation/memory`
+- `GET /api/reconciliation/memory/timeline`
+- `POST /api/reconciliation/runs`
+- `GET /api/reconciliation/runs`
+- `GET /api/reconciliation/runs/:runId`
+- `POST /api/reconciliation/mismatches/:mismatchId/resolve`
+- `GET /api/reconciliation/reports/:runId`
+- `GET /api/reconciliation/audit`
+
+### Reconciliation testing
+
+- Preserve baseline support-memory coverage:
+  - `npm run test:baseline`
+- Run additive reconciliation suites:
+  - `npm run test:reconciliation`
+
+Additional docs:
+- `docs/reconciliation-architecture.md`
+- `docs/connector-onboarding.md`
+- `docs/finance-memory-model.md`
+- `docs/security-tenant-isolation.md`
+- `docs/reconciliation-runbook.md`
+- `docs/actual-data-testing.md`

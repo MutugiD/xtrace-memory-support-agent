@@ -6,11 +6,16 @@
   "description": "Memory-aware customer support agent demo using XTrace (belief revision, provenance, session continuity).",
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json && node scripts/copy-ui.mjs",
+    "dev:reconciliation": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx watch services/gateway/server.ts",
+    "build": "tsc -p tsconfig.json && tsc -p services/tsconfig.json && node scripts/copy-ui.mjs",
     "start": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first node dist/server.js",
+    "start:reconciliation": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first node dist-services/gateway/server.js",
     "demo": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx src/demo/run-demo.ts",
+    "demo:reconciliation": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx services/demo/run-reconciliation-demo.ts",
     "memory:timeline": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx src/demo/memory-timeline.ts",
     "test": "vitest run",
+    "test:baseline": "vitest run src/tests",
+    "test:reconciliation": "vitest run services/tests",
     "test:sdk": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx src/tests/sdk-features.ts",
     "test:sdk:reset": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first tsx src/tests/sdk-features.ts --reset"
   },
